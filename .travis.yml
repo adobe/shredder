@@ -1,0 +1,12 @@
+language: java
+jdk:
+  - oraclejdk8
+install: true
+sudo: required
+services:
+  - docker
+script: ./gradlew  clean build shredder-ec2:buildRpm shredder-ec2:buildDeb --info
+cache:
+  directories:
+    - "$HOME/.m2"
+    - "$HOME/.gradle"

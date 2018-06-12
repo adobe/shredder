@@ -1,0 +1,39 @@
+<!--
+  ~  Copyright 2018 Adobe Systems Incorporated. All rights reserved.
+  ~  This file is licensed to you under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License. You may obtain a copy
+  ~  of the License at http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software distributed under
+  ~  the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+  ~  OF ANY KIND, either express or implied. See the License for the specific language
+  ~  governing permissions and limitations under the License.
+  -->
+
+<configuration>
+    <property name="LOG_PATH" value="/var/log/demdex/shredder-ec2"/>
+
+    <appender name="FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/ec2shredder.log</file>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>
+                %d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </Pattern>
+        </encoder>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- rollover daily -->
+            <fileNamePattern>ec2shredder.-%d{yyyy-MM-dd}.%i.txt</fileNamePattern>
+            <!-- each file should be at most 10MB, keep 30 days worth of history, but at most 1GB -->
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

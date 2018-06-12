@@ -1,0 +1,3 @@
+rootProject.name = 'shredder'
+include 'shredder-core'
+include 'shredder-ec2'
