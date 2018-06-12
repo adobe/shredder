@@ -1,0 +1,125 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+
+if (!project.hasProperty("NEXUS_USERNAME")) {
+    println "No NEXUS_USERNAME found"
+    ext.NEXUS_USERNAME = ""
+}
+
+if (!project.hasProperty("NEXUS_PASSWORD")) {
+    println "No NEXUS_PASSWORD found"
+    ext.NEXUS_PASSWORD = ""
+}
+
+allprojects {
+
+    apply plugin: "java"
+    apply plugin: "groovy"
+
+    apply plugin: 'maven'
+    apply plugin: 'signing'
+
+
+    sourceCompatibility = 1.8
+}
+
+subprojects {
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        compile 'com.typesafe:config:1.3.1'
+        compile "com.google.inject:guice:4.1.0"
+        // logging
+        compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+
+        compile "ch.qos.logback:logback-classic:1.2.3"
+
+        compile "com.amazonaws:aws-java-sdk-ec2:1.11.221"
+        compile "com.amazonaws:aws-java-sdk-sqs:1.11.221"
+        compile "com.amazonaws:aws-java-sdk-sns:1.11.221"
+        compile "com.amazonaws:aws-java-sdk-autoscaling:1.11.221"
+        compile "org.json:json:20171018"
+
+        // spock & junit
+        testCompile "org.codehaus.groovy:groovy-all:2.4.5"
+        testCompile "org.spockframework:spock-core:1.0-groovy-2.4"
+        testRuntime "cglib:cglib-nodep:3.2.0"          // allows mocking of classes (in addition to interfaces)
+        testRuntime "org.objenesis:objenesis:2.2"      // allows mocking of classes without default constructor (together with CGLIB)
+    }
+}
+
+
+
+project (':shredder-core') {
+    version = VERSION_NAME
+    group = GROUP
+
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from javadoc
+    }
+
+    task sourcesJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    artifacts {
+        archives javadocJar, sourcesJar
+    }
+
+    signing {
+        sign configurations.archives
+    }
+
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    authentication(userName: "$NEXUS_USERNAME", password: "$NEXUS_PASSWORD")
+                }
+
+                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                    authentication(userName: "$NEXUS_USERNAME", password: "$NEXUS_PASSWORD")
+                }
+
+                pom.project {
+                    name 'Shredder-for-EC2'
+                    packaging 'jar'
+                    // optionally artifactId can be defined here
+                    description "A Java daemon service that can perform graceful shutdowns for AWS EC2 instances in an Auto Scaling Group (ASG)."
+                    url 'https://github.com/adobe/shredder'
+
+                    scm {
+                      connection 'scm:git:https://github.com/adobe/shredder.git'
+                      developerConnection 'scm:git:git@github.com/adobe/shredder.git'
+                      url 'https://github.com/adobe/shredder.git'
+                    }
+
+                    licenses {
+                        license {
+                            name 'The Apache License, Version 2.0'
+                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id 'costimuraru'
+                            name 'Constantin Muraru'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
