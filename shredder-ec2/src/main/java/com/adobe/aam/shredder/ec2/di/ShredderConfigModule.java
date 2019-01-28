@@ -12,61 +12,86 @@
 
 package com.adobe.aam.shredder.ec2.di;
 
-import com.amazonaws.util.StringUtils;
+import com.adobe.aam.shredder.core.command.ScriptRunner;
+import com.adobe.aam.shredder.core.command.ScriptRunner.ScriptRunnerFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Named;
-import javax.inject.Singleton;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.stream.Collectors;
+import java.time.Duration;
 
 public class ShredderConfigModule extends AbstractModule {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ShredderConfigModule.class);
-    private static final String DEFAULT_SHUTDOWN_SCRIPTS_PATH = "/opt/shutdown-scripts/";
-    
-
-
     @Override
-    protected void configure() {
-    }
-
-    @Provides @Singleton
-    public Config provideConfiguration() {
-        return ConfigFactory.load();
+    public void configure() {
     }
 
     @Provides
-    @Named("scripts")
-    public Collection<String> scripts(Config config) {
-        return getShutdownScripts(config);
+    @Named("scriptOutputPath")
+    public String scriptOutputPath(Config config) {
+        return config.getString("script_output_path");
     }
 
-    private Collection<String> getShutdownScripts(Config config) {
+    @Provides
+    @Named("startupPersistFile")
+    public String startupPersistFile(Config config) {
+        return config.getString("startup_persist_result_file");
+    }
+
+    @Provides
+    @Named("startupScriptRunner")
+    public ScriptRunner startupScriptRunner(ScriptRunnerFactory scriptRunnerFactory, Config config) {
+
+        String startupScriptsPath = config.getString("startup_scripts_path");
+        String startupScriptsPriority = config.hasPath("startup_scripts_priority")
+                ? config.getString("startup_scripts_priority")
+                : "";
+        return scriptRunnerFactory.create(startupScriptsPath, startupScriptsPriority);
+    }
+
+    @Provides
+    @Named("shutdownScriptRunner")
+    public ScriptRunner shutdownScriptRunner(
+            ScriptRunnerFactory scriptRunnerFactory,
+            Config config) {
+
         String shutdownScriptsPath = config.getString("shutdown_scripts_path");
-        if (StringUtils.isNullOrEmpty(shutdownScriptsPath)) {
-            shutdownScriptsPath = DEFAULT_SHUTDOWN_SCRIPTS_PATH;
-        }
-        try {
-            return Files.list(Paths.get(shutdownScriptsPath))
-                    .map(Path::toFile)
-                    .filter(file -> file.getName().endsWith(".sh"))
-                    .map(File::getAbsolutePath)
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            LOG.warn("No shutdown scripts found");
-            return Collections.emptyList();
-        }
+        String shutdownScriptsPriority = config.hasPath("shutdown_scripts_priority")
+                ? config.getString("shutdown_scripts_priority")
+                : "";
+        return scriptRunnerFactory.create(shutdownScriptsPath, shutdownScriptsPriority);
+    }
+
+    @Provides
+    @Named("maxWaitTimeOnShutdownFailure")
+    public Duration getMaxWaitTimeOnShutdownFailure(Config config) {
+        return config.hasPath("shutdown_wait_time_if_failure")
+                ? config.getDuration("shutdown_wait_time_if_failure")
+                : Duration.ofMillis(0);
+    }
+
+    @Provides
+    @Named("sendCloudWatchMetrics")
+    public Boolean sendCloudWatchMetrics(Config config) {
+        return config.getBoolean("send_cloud_watch_metrics");
+    }
+
+    @Provides
+    @Named("cloudWatchNamespace")
+    public String getCloudWatchNamespace(Config config) {
+        return config.getString("cloud_watch_namespace");
+    }
+
+    @Provides
+    @Named("startupScriptsEnabled")
+    public boolean startupScriptsEnabled(Config config) {
+        return config.getBoolean("startup_scripts_enabled");
+    }
+
+    @Provides
+    @Named("shutdownOnStartupFail")
+    public boolean shutdownOnStartupFail(Config config) {
+        return config.getBoolean("shutdown_on_startup_fail");
     }
 }

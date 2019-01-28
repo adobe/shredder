@@ -21,8 +21,6 @@ import org.slf4j.LoggerFactory;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -74,20 +72,13 @@ class MacroOutputBuilder {
         }
     }
 
-    MacroOutputBuilder withHost() {
-        System.setProperty("java.net.preferIPv4Stack", "true");
-        try {
-            output = output.replace("HOSTNAME_MACRO", InetAddress.getLocalHost().getHostName());
-        } catch (UnknownHostException e) {
-            LOG.error("Unable to get hostname", e);
-        }
-
+    MacroOutputBuilder withHost(String hostname) {
+        output = output.replace("HOSTNAME_MACRO", hostname == null ? "no-hostname" : hostname);
         return this;
     }
 
     MacroOutputBuilder withRegion(String region) {
-        output = output.replace("REGION_MACRO", region);
-
+        output = output.replace("REGION_MACRO", region == null ? "no-region" : region);
         return this;
     }
 

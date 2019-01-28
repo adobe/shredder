@@ -1,95 +1,83 @@
-/*
- *  Copyright 2018 Adobe Systems Incorporated. All rights reserved.
- *  This file is licensed to you under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License. You may obtain a copy
- *  of the License at http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software distributed under
- *  the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
- *  OF ANY KIND, either express or implied. See the License for the specific language
- *  governing permissions and limitations under the License.
- */
-
 package com.adobe.aam.shredder.ec2.service;
 
-import com.adobe.aam.shredder.core.aws.TriggerHelper;
-import com.adobe.aam.shredder.core.aws.TriggerWatcher;
-import com.adobe.aam.shredder.core.command.ScriptRunner;
 import com.adobe.aam.shredder.ec2.aws.LifecycleHandler;
-import com.adobe.aam.shredder.ec2.trigger.TerminationMessage;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
+import com.adobe.aam.shredder.ec2.aws.LifecycleHook;
+import com.adobe.aam.shredder.ec2.log.ShredderLogUploader;
+import com.adobe.aam.shredder.ec2.notifier.Notifier;
+import com.adobe.aam.shredder.ec2.runner.BlockOnShutdownFailure;
+import com.adobe.aam.shredder.ec2.runner.ShutdownCommandsRunner;
+import com.adobe.aam.shredder.ec2.trigger.ShutdownLifecycleHookMessage;
+import com.adobe.aam.shredder.ec2.trigger.ShutdownTriggerListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 
-@Singleton
 public class ShutdownService {
+
     private static final Logger LOG = LoggerFactory.getLogger(ShutdownService.class);
 
-    private TriggerHelper triggerHelper;
-    private TriggerWatcher triggerWatcher;
-    private LifecycleHandler lifecycleHandler;
-    private ScriptRunner scriptRunner;
-    private String instanceId;
+    private final ShutdownTriggerListener shutdownTriggerListener;
+    private final Notifier notifier;
+    private final ShutdownCommandsRunner shutdownCommandsRunner;
+    private final ShredderLogUploader shredderLogUploader;
+    private final BlockOnShutdownFailure block;
+    private final boolean shutdownOnStartupFail;
+    private final LifecycleHandler lifecycleHandler;
 
     @Inject
-    ShutdownService(TriggerHelper triggerHelper,
-                    TriggerWatcher triggerWatcher,
-                    LifecycleHandler lifecycleHandler,
-                    ScriptRunner scriptRunner,
-                    @Named("instanceId") String instanceId) {
-        this.triggerHelper = triggerHelper;
-        this.triggerWatcher = triggerWatcher;
+    public ShutdownService(ShutdownTriggerListener shutdownTriggerListener,
+                           Notifier notifier,
+                           ShutdownCommandsRunner shutdownCommandsRunner,
+                           ShredderLogUploader shredderLogUploader,
+                           BlockOnShutdownFailure block,
+                           @Named("shutdownOnStartupFail") boolean shutdownOnStartupFail,
+                           LifecycleHandler lifecycleHandler) {
+        this.shutdownTriggerListener = shutdownTriggerListener;
+        this.notifier = notifier;
+        this.shutdownCommandsRunner = shutdownCommandsRunner;
+        this.shredderLogUploader = shredderLogUploader;
+        this.block = block;
+        this.shutdownOnStartupFail = shutdownOnStartupFail;
         this.lifecycleHandler = lifecycleHandler;
-        this.scriptRunner = scriptRunner;
-        this.instanceId = instanceId;
     }
 
-    public void run() {
-        triggerWatcher
-                .requestTriggers(TerminationMessage.class)
-                .filter(this::shouldTerminate)
-                .subscribe(new TerminationSubscriber());
+    public boolean getShutdownResult(boolean startupSuccessful) {
+        ShutdownLifecycleHookMessage trigger = shutdownTriggerListener.listenForShutdownTrigger();
 
-        LOG.info("Finished successfully. Exiting now.");
+        boolean shutdownSuccessful = shouldShutdown(startupSuccessful, trigger);
+        shredderLogUploader.uploadShutdownLogs(shutdownSuccessful);
+        notifier.notifyMonitoringServiceAboutShutdown(shutdownSuccessful);
+        if (shutdownSuccessful) {
+            terminateInstance(trigger);
+        } else {
+            // Block till someone fixes the issue.
+            blockOnShutdownFailure(trigger);
+        }
+
+        return shutdownSuccessful;
     }
 
-    private boolean shouldTerminate(TerminationMessage trigger) {
-        return "autoscaling:EC2_INSTANCE_TERMINATING".equals(trigger.getLifecycleTransition())
-                && instanceId.equals(trigger.getEc2InstanceId());
+    private boolean shouldShutdown(boolean startupSuccessful, ShutdownLifecycleHookMessage trigger) {
+        if (startupSuccessful) {
+            return executeShutdownScripts(trigger);
+        }
+
+        return shutdownOnStartupFail;
     }
 
-    private class TerminationSubscriber implements Subscriber<TerminationMessage> {
+    private void blockOnShutdownFailure(ShutdownLifecycleHookMessage trigger) {
+        LOG.error("Shutdown failed.");
+        block.blockOnShutdownFailure(trigger);
+        LOG.error("Shutdown block time expired.");
+    }
 
-        private Subscription subscription;
+    private boolean executeShutdownScripts(ShutdownLifecycleHookMessage trigger) {
+        return shutdownCommandsRunner.getRunShutdownScriptsResult(trigger);
+    }
 
-        @Override
-        public void onSubscribe(Subscription s) {
-            this.subscription = s;
-            s.request(Long.MAX_VALUE);
-        }
-
-        @Override
-        public void onNext(TerminationMessage trigger) {
-            LOG.info("Received TERMINATION signal.");
-            subscription.cancel();
-            scriptRunner.runScripts(() -> lifecycleHandler.sendHeartbeat(trigger));
-            triggerHelper.cleanUp();
-            lifecycleHandler.completeLifecycle(trigger);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            LOG.error("Received error when processing SQS messages.", t);
-        }
-
-        @Override
-        public void onComplete() {
-            LOG.error("Unexpected #onComplete call.");
-        }
+    public void terminateInstance(LifecycleHook trigger) {
+        lifecycleHandler.successfulCompleteLifecycle(trigger);
     }
 }

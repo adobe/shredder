@@ -10,7 +10,7 @@
  *  governing permissions and limitations under the License.
  */
 
- buildscript {
+buildscript {
   repositories {
     maven {
       url "https://plugins.gradle.org/m2/"
@@ -22,14 +22,15 @@
   }
 }
 
-apply plugin: "nebula.ospackage"
-apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'application'
+apply plugin: 'nebula.ospackage'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 mainClassName = 'com.adobe.aam.shredder.ec2.Main'
 
 dependencies {
-    compile project(':shredder-core')
+    compile project(':shredder-core-guice')
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-cloudwatch', version: '1.11.389'
 }
 
 // Used by shadow jar
@@ -62,7 +63,7 @@ ospackage {
 
     into "/usr/local/demdex/${project.name}/"
 
-    from("build/libs/${project.name}-all.jar") {
+    from("build/libs/${project.name}-${project.version}-all.jar") {
         user "ddxapp"
         permissionGroup "ddx"
         into "lib"
@@ -90,7 +91,6 @@ ospackage {
 }
 
 buildRpm {
-    postInstall "/sbin/chkconfig --add ${project.name}"
     dependsOn(shadowJar)
 }
 

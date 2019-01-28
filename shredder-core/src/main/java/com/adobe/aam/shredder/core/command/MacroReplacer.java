@@ -12,22 +12,22 @@
 
 package com.adobe.aam.shredder.core.command;
 
+import com.adobe.aam.shredder.core.HostnameProvider;
 import com.adobe.aam.shredder.core.trigger.TriggerMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
 public class MacroReplacer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MacroReplacer.class);
-
     private final String region;
+    private final HostnameProvider hostnameProvider;
 
     @Inject
-    public MacroReplacer(@Named("region") String region) {
+    public MacroReplacer(@Named("region") String region,
+                         HostnameProvider hostnameProvider) {
         this.region = region;
+        this.hostnameProvider = hostnameProvider;
     }
 
     /**
@@ -38,7 +38,7 @@ public class MacroReplacer {
      */
     public String replaceMacros(String command) {
         return new MacroOutputBuilder(command)
-                .withHost()
+                .withHost(hostnameProvider.getHostname())
                 .withRegion(region)
                 .build();
     }
@@ -50,7 +50,7 @@ public class MacroReplacer {
     public <T extends TriggerMessage> String replaceMacros(String command, T triggerMessage) {
         return new MacroOutputBuilder(command)
                 .withTriggerInformation(triggerMessage)
-                .withHost()
+                .withHost(hostnameProvider.getHostname())
                 .withRegion(region)
                 .build();
     }

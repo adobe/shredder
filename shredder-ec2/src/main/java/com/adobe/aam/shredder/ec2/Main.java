@@ -14,10 +14,7 @@ package com.adobe.aam.shredder.ec2;
 
 import com.adobe.aam.shredder.ec2.di.InjectorBuilder;
 import com.adobe.aam.shredder.ec2.service.ShutdownService;
-import com.amazonaws.util.StringUtils;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.Service;
-import com.google.common.util.concurrent.ServiceManager;
+import com.adobe.aam.shredder.ec2.service.StartupService;
 import com.google.inject.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +30,11 @@ public class Main {
 
         LOG.info("Starting EC2 shredder daemon.");
 
-        ShutdownService service = injector.getInstance(ShutdownService.class);
-        service.run();
-    }
+        StartupService startupService = injector.getInstance(StartupService.class);
+        boolean startupSuccessful = startupService.getStartupResult();
 
+        ShutdownService shutdownService = injector.getInstance(ShutdownService.class);
+        boolean shutdownSuccessful = shutdownService.getShutdownResult(startupSuccessful);
+        LOG.error("Exiting. shutdownSuccessful={}", shutdownSuccessful);
+    }
 }

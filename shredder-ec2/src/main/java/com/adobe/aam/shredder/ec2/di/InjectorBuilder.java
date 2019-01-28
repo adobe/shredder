@@ -12,7 +12,9 @@
 
 package com.adobe.aam.shredder.ec2.di;
 
+import com.adobe.aam.shredder.core.di.ConfigModule;
 import com.adobe.aam.shredder.core.di.MainModule;
+import com.adobe.aam.shredder.core.di.RemoteLogModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
@@ -20,8 +22,12 @@ public class InjectorBuilder {
 
     public static Injector build() {
         return Guice.createInjector(
+                new ConfigModule(),
                 new ShredderConfigModule(),
-                new MainModule()
+                new ShredderMonitorModule(),
+                new StartupModule(),
+                new MainModule(),
+                new RemoteLogModule()
         );
     }
 }

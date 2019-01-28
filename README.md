@@ -177,9 +177,6 @@ aws s3 cp /usr/mywebapp/important_data "s3://mybucket/important_data/us-east-1/u
 ## Sends heartbeats to the AWS Auto Scale group 
 Even if a command takes 1 hour to run, the daemon will periodically send heartbeats to the ASG so that it keeps the EC2 instance alive
 
-## FIFO SQS Queue
-The Shredder for EC2 uses a FIFO SQS (in those AWS regions where it is available), to guarantee exactly once message processing.
-
 # Additional cleanup on remote services
 
 After the EC2 instance is terminated, it is sometimes useful to notify another system about this event. For instance, you might have another service where you need to do some DNS/monitoring cleanup for the EC2 node that was terminated. If available, you could just do an HTTP call to such service, directly from the Shredder for EC2 (e.g. `https://my-remote-monitoring-service.com/remove/asg-ec2-i3`).
@@ -202,7 +199,7 @@ commands = [
 
 To build this project:
 
-```
+```sh
 $ git clone git@github.com:adobe/shredder.git
 $ cd shredder
 
@@ -218,6 +215,28 @@ $ ./gradlew clean build shredder-ec2:buildDeb
 # find . -name "*deb"
 ./shredder-ec2/build/distributions/aam-shredder-ec2_1.0.0-20180612235918_noarch.deb
 ```
+
+# Open in IntelliJ
+
+```sh
+$ git clone git@github.com:adobe/shredder.git
+$ cd shredder
+$ idea .
+```
+
+## Run from IntelliJ
+
+To run shredder-ec2 locally, you can pass environment variables to bypass AWS resource lookups.
+```
+AWS_PROFILE=aam-npe
+SHREDDER_CONFIG_FILE=shredder-ec2/src/main/resources/reference.conf
+region=us-east-1
+instanceId=i-0a3806d7164d3de2f
+accountId=<enter-aam-npe-account-id>
+```
+
+# Other use cases
+The shredder-core module can be used for implementing other use cases. See the sample-cleanup sample application. 
 
 # Credits
 

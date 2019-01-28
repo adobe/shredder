@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ConfigModule extends AbstractModule {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigModule.class);
-    private static final String DEFAULT_CONFIG_FILE = "/tmp/shredder.conf";
+    private static final String DEFAULT_CONFIG_FILE = "/enter/path/to/reference.conf";
 
     @Override
     protected void configure() {

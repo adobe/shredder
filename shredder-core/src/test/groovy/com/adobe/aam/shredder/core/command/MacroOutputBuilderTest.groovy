@@ -23,7 +23,7 @@ class MacroOutputBuilderTest extends Specification {
 
         when:
         def output = builder
-                .withHost()
+                .withHost("myhost")
                 .withRegion(region)
                 .build()
 
@@ -33,7 +33,7 @@ class MacroOutputBuilderTest extends Specification {
         where:
         command                        | region      | expectedOutput
         "ls REGION_MACRO"              | "myregion"  | "ls myregion"
-        "cat HOSTNAME_MACRO"           | ""          | "cat " + getActualHostname()
+        "echo HOSTNAME_MACRO"          | ""          | "echo myhost"
         "ls"                           | "us-east-1" | "ls"
         "BROKEN_MACRO cp REGION_MACRO" | "us-east-1" | "BROKEN_MACRO cp us-east-1"
         ""                             | "us-east-1" | ""
@@ -63,7 +63,7 @@ class MacroOutputBuilderTest extends Specification {
         when:
         def output = builder
                 .withTriggerInformation(trigger)
-                .withHost()
+                .withHost("somehost")
                 .withRegion(region)
                 .build()
 
@@ -72,12 +72,8 @@ class MacroOutputBuilderTest extends Specification {
 
         where:
         command                                                 | region      | trigger                        | expectedOutput
-        "ls TRIGGER_HOSTNAME_MACRO REGION_MACRO HOSTNAME_MACRO" | "us-east-1" | genTrigger("value1", "value2") | "ls value1 us-east-1 " + getActualHostname()
+        "ls TRIGGER_HOSTNAME_MACRO REGION_MACRO HOSTNAME_MACRO" | "us-east-1" | genTrigger("value1", "value2") | "ls value1 us-east-1 somehost"
         "ls REGION_MACRO TRIGGER_FIELD2_MACRO"                  | "us-east-1" | genTrigger("value1", "value2") | "ls us-east-1 value2"
-    }
-
-    static String getActualHostname() {
-        InetAddress.getLocalHost().getHostName()
     }
 
     private TriggerMessage genTrigger(String field1, String field2) {

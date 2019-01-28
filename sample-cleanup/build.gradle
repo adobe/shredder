@@ -1,0 +1,90 @@
+buildscript {
+  repositories {
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+  dependencies {
+    classpath "com.netflix.nebula:gradle-ospackage-plugin:4.9.3"
+    classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+  }
+}
+
+apply plugin: 'application'
+apply plugin: 'nebula.ospackage'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+mainClassName = 'com.adobe.aam.shredder.opscleanup.Main'
+
+dependencies {
+    compile project(':shredder-core-guice')
+}
+
+// Used by shadow jar
+jar {
+    manifest {
+        attributes(
+                'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
+                'Main-Class': mainClassName
+        )
+    }
+}
+
+ospackage {
+    license "Adobe Audience Manager"
+    vendor "Adobe Audience Manager"
+    url "http://www.adobe.com/products/audiencemanager.html"
+    archStr "noarch"
+
+    packageName "aam-${project.name}"
+    release "${new Date().format('yyyyMMddHHmmss')}"
+    version "${project.ext.VERSION_NAME}"
+    os "LINUX"
+
+    packageDescription "Adobe Audience Manager - ${project.name}"
+
+    requires('java-service-wrapper')
+    requires('jdk')
+    preInstall file('pkg_scripts/preInstall.sh')
+    postInstall file('pkg_scripts/postInstall.sh')
+
+    into "/usr/local/demdex/${project.name}/"
+
+    from("build/libs/${project.name}-${project.version}-all.jar") {
+        user "ddxapp"
+        permissionGroup "ddx"
+        into "lib"
+        fileMode 0755
+    }
+
+    from("build/resources/main") {
+        user "ddxapp"
+        permissionGroup "ddx"
+        into "config"
+        fileMode 0644
+    }
+
+    from("build/resources/main/wrapper/opscleanup") {
+        user "ddxapp"
+        permissionGroup "ddx"
+        into "bin"
+        fileMode 0655
+    }
+
+    // Mark as NO_REPLACE, so that we don't overwrite this file at upgrades.
+    configurationFile("/usr/local/demdex/${project.name}/config/opscleanup.conf")
+
+    link("/etc/init.d/${project.name}", "/usr/local/demdex/${project.name}/bin/opscleanup")
+    link("/etc/sysconfig/samplecleanup_wrapper.conf", "/usr/local/demdex/${project.name}/config/wrapper/samplecleanup_wrapper.conf")
+    postInstall "install --mode=0755 --owner=ddxapp --group=ddx --directory /var/log/demdex/${project.name}"
+    postInstall "install --mode=0755 --owner=ddxapp --group=ddx --directory /var/run/demdex/${project.name}"
+}
+
+buildRpm {
+    postInstall "/sbin/chkconfig --add ${project.name}"
+    dependsOn(shadowJar)
+}
+
+buildDeb {
+    dependsOn(shadowJar)
+}
