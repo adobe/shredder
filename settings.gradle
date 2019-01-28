@@ -1,3 +1,6 @@
 rootProject.name = 'shredder'
 include 'shredder-core'
+include 'shredder-core-spring'
+include 'shredder-core-guice'
 include 'shredder-ec2'
+include 'sample-cleanup'

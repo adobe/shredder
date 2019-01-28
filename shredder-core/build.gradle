@@ -1,5 +1,3 @@
-apply plugin: 'application'
-
 /*
  *  Copyright 2018 Adobe Systems Incorporated. All rights reserved.
  *  This file is licensed to you under the Apache License, Version 2.0 (the "License");
@@ -12,21 +10,13 @@ apply plugin: 'application'
  *  governing permissions and limitations under the License.
  */
 
-//TODO
+apply plugin: 'application'
+
 mainClassName = 'com.adobe.aam.shredder.ec2.Main'
 
 dependencies {
-    compile group: 'com.github.davidmoten', name: 'rxjava2-aws', version: '0.1.13'
-
+    compile group: 'com.github.davidmoten', name: 'rxjava2-aws', version: '0.1.14'
     compile 'com.github.rholder:guava-retrying:2.0.0'
-}
-
-// Used by shadow jar
-jar {
-  manifest {
-     attributes(
-       'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
-       'Main-Class': mainClassName
-    )
-  }
+    compile 'com.google.inject.extensions:guice-assistedinject:4.0'
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
 }
