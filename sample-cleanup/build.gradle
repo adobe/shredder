@@ -77,7 +77,7 @@ ospackage {
     link("/etc/init.d/${project.name}", "/usr/local/demdex/${project.name}/bin/opscleanup")
     link("/etc/sysconfig/samplecleanup_wrapper.conf", "/usr/local/demdex/${project.name}/config/wrapper/samplecleanup_wrapper.conf")
     postInstall "install --mode=0755 --owner=ddxapp --group=ddx --directory /var/log/demdex/${project.name}"
-    postInstall "install --mode=0755 --owner=ddxapp --group=ddx --directory /var/run/demdex/${project.name}"
+    postInstall "install --mode=0755 --owner=ddxapp --group=ddx --directory /var/run/${project.name}"
 }
 
 buildRpm {

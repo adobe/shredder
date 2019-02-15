@@ -57,7 +57,7 @@ WRAPPER_CONF="/etc/sysconfig/ec2shredder_wrapper.conf"
 PRIORITY=50
 
 # Location of the pid file.
-PIDDIR="/var/run/demdex"
+PIDDIR="/var/run"
 
 # PIDFILE_CHECK_PID tells the script to double check whether the pid in the pid
 #  file actually exists and belongs to this application.  When not set, only
