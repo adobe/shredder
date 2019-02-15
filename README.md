@@ -14,7 +14,7 @@ For RedHat/Centos
 sudo yum install https://github.com/adobe/shredder/releases/download/2.0.1/aam-shredder-ec2-2.0.1-20190215154045.noarch.rpm
 ```
 
-By default, whenever shredder receives a shutdown signal, it will run all the scripts from `/opt/shutdown-scripts` (in lexicographical order). Therefore, you can put your cleanup scripts in this path. For instance:
+By default, whenever shredder receives a shutdown signal, it will run all the scripts from `/opt/shutdown-scripts` (in lexicographical order). In our case, each application RPM that requires a cleanup logic will automatically generate a shutdown script in this shutdown folder. For instance:
 ```bash
 $ tree /opt/shutdown-scripts
 /opt/shutdown-scripts
@@ -27,12 +27,16 @@ $ cat /opt/shutdown-scripts/myapp/shutdown.sh
 s3_bucket="s3://aam-dcs-shutdownhook-$ENVIRONMENT"
 s3_shutdown_data_path="$s3_bucket/log/$AWS_REGION/$HOSTNAME/"
 
-execute_command "aws s3 cp /path/to/data/to/upload/in/s3 $s3_shutdown_data_path --recursive --exclude '*' --include '*.log' --include '*.tmp' --exclude '*processed/*'"
+aws s3 cp /path/to/data/to/upload/in/s3 $s3_shutdown_data_path --recursive --exclude '*' --include '*.log' --include '*.tmp' --exclude '*processed/*'
 ```
 
 Note that shredder automatically injects a set of useful environment variables when running the shutdown scripts: `$AWS_REGION`, `$AWS_ACCOUNT_ID`, `$AWS_INSTANCE_ID`, `$HOSTNAME`, `$ENVIRONMENT`.
 
-In our case, each application RPM that requires a cleanup logic will automatically generate a shutdown script in the shutdown folder (eg. `/opt/shutdown-scripts/myapp/shutdown.sh`).
+If all the shutdown scripts exit with code 0, shredder treats this as a successful shutdown and notifies the Auto Scale Group, by sending the COMPLETE:CONTINUE lifecycle action. This will terminate the instance.
+
+However, if at least one of the scripts finishes with non-zero exit code, this could mean that we were not able to backup the data before terminating the instance. In this case, we would like to prevent terminating the instance, so that we can investigate what happened and recover the data (either manually or automatically). By default, if the shutdown script exits with non-zero code, shredder not terminate the instance. Instead it will wait for up to 3 days, periodically sending heartbeats to the ASG, in order to maintain the instance up. This duration can be configured via the [SHREDDER_SHUTDOWN_WAIT_TIME_IF_FAILURE](https://github.com/adobe/shredder/blob/master/shredder-ec2/src/main/resources/reference.conf#L19) environment variable. If the time expires, shredder will notify the Auto Scale Group by sending a COMPLETE:ABANDON lifecycle action and the instance will get terminated.
+
+To find out more about Amazon EC2 Auto Scaling lifecycle hooks you can go [here](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html).
 
 # How it works
 
@@ -235,11 +239,11 @@ $ idea .
 
 To run shredder-ec2 locally, you can pass environment variables to bypass AWS resource lookups.
 ```
-AWS_PROFILE=aam-npe
 SHREDDER_CONFIG_FILE=shredder-ec2/src/main/resources/reference.conf
-region=us-east-1
-instanceId=i-0a3806d7164d3de2f
-accountId=<enter-aam-npe-account-id>
+AWS_PROFILE=aam-npe
+AWS_REGION=us-east-1
+AWS_REGION_ID=i-0a3806d7164d3de2f
+AWS_ACCOUNT_ID=<enter-aam-npe-account-id>
 ```
 
 # Other use cases
