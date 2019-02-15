@@ -5,8 +5,16 @@ install: true
 sudo: required
 services:
   - docker
-script: ./gradlew  clean build shredder-ec2:buildRpm shredder-ec2:buildDeb --info
+script: ./gradlew clean build shredder-ec2:buildRpm shredder-ec2:buildDeb -x signArchives --info
 cache:
   directories:
     - "$HOME/.m2"
     - "$HOME/.gradle"
+deploy:
+  provider: releases
+  api_key: '$GITHUB_API_KEY'
+  skip_cleanup: true
+  file_glob: true
+  file: "shredder-ec2/build/distributions/*.rpm"
+  on:
+    tags: true
