@@ -11,8 +11,28 @@ This tool is useful for services that are stateful - some data needs to be pushe
 You can either build the latest packages (see below) or you can use the published artifacts.
 For RedHat/Centos
 ```
-sudo yum install https://github.com/adobe/shredder/releases/download/1.0.0/aam-shredder-ec2-1.0.0-20180613002604.noarch.rpm
+sudo yum install https://github.com/adobe/shredder/releases/download/2.0.1/aam-shredder-ec2-2.0.1-20190215154045.noarch.rpm
 ```
+
+By default, whenever shredder receives a shutdown signal, it will run all the scripts from `/opt/shutdown-scripts` (in lexicographical order). Therefore, you can put your cleanup scripts in this path. For instance:
+```bash
+$ tree /opt/shutdown-scripts
+/opt/shutdown-scripts
+├── myapp
+│   └── shutdown.sh
+└── route53-utils
+    └── remove_dns.sh
+
+$ cat /opt/shutdown-scripts/myapp/shutdown.sh
+s3_bucket="s3://aam-dcs-shutdownhook-$ENVIRONMENT"
+s3_shutdown_data_path="$s3_bucket/log/$AWS_REGION/$HOSTNAME/"
+
+execute_command "aws s3 cp /path/to/data/to/upload/in/s3 $s3_shutdown_data_path --recursive --exclude '*' --include '*.log' --include '*.tmp' --exclude '*processed/*'"
+```
+
+Note that shredder automatically injects a set of useful environment variables when running the shutdown scripts: `$AWS_REGION`, `$AWS_ACCOUNT_ID`, `$AWS_INSTANCE_ID`, `$HOSTNAME`, `$ENVIRONMENT`.
+
+In our case, each application RPM that requires a cleanup logic will automatically generate a shutdown script in the shutdown folder (eg. `/opt/shutdown-scripts/myapp/shutdown.sh`).
 
 # How it works
 
@@ -91,7 +111,7 @@ The IAM role (myrole/spinnakerasg) must have permissions to publish to the speci
   ]
 }
 ```
-The Auto Scale Group (ASG) must be able to assume the afore mentioned role. In order to do this, we must add a policy like this:
+The Auto Scale Group (ASG) must be able to assume the afore mentioned role. In order to do this, we must add a Trust Relationship like this on the `myrole/spinnakerasg` role:
 
 ```json
 {
@@ -161,18 +181,8 @@ Therefore, the IAM role used for the EC2 instance, needs to have these permissio
 
 # Shredder for EC2 features
 
-## Macro replacements. 
-The Shredder for EC2 is able to replace certain macros found in the cleanup commands that are about to be executed. For instance, consider the following config:
-```
-s3_shutdown_data = "s3://mybucket/important_data/REGION_MACRO/HOSTNAME_MACRO/"
-commands = [
-	"aws s3 cp /usr/mywebapp/important_data "${s3_shutdown_data}" --recursive --exclude '*' --include '*.data' --include '*.zip'
-]
-```
-Shredder for EC2 will replace the macro, resulting in running a command that looks like this:
-```
-aws s3 cp /usr/mywebapp/important_data "s3://mybucket/important_data/us-east-1/use-prod-mywebapp-0fba6ad90/" --recursive --exclude '*' --include '*.data' --include '*.zip'
-```
+## Automatic variable injection
+shredder automatically injects a set of useful environment variables when running the shutdown scripts: `$AWS_REGION`, `$AWS_ACCOUNT_ID`, `$AWS_INSTANCE_ID`, `$HOSTNAME`, `$ENVIRONMENT`.
 
 ## Sends heartbeats to the AWS Auto Scale group 
 Even if a command takes 1 hour to run, the daemon will periodically send heartbeats to the ASG so that it keeps the EC2 instance alive
@@ -183,16 +193,13 @@ After the EC2 instance is terminated, it is sometimes useful to notify another s
 
 However, if such an API is not available, you might want to run a daemon on the remote service itself. This daemon would listen for EC2 instance termination complete messages, and will perform the cleanup when such a message is received. This can be achieved by writing your own custom application based on the shredder-core module, which reads SNS notifications from a second topic (e.g. spinnaker-shutdown-complete). 
 
-The Shredder-for-EC2 can be instrumented to send a notification to a different SNS topic, when the cleanup is completed. You can just add this in the list of commands:
-```
-target_sns_topic = "arn:aws:sns:"${aws.region_name}":"${aws.account_id}":spinnaker-shutdowns-complete"
+The Shredder-for-EC2 can be instrumented to send a notification to a different SNS topic, when the cleanup is completed. You can just add a shutdown script in /opt/shutdown-scripts, which will be executed by shredder:
 
-commands = [
-	"cleanup command here",
-	"cleanup command here",
-	"cleanup command here",
-    "aws sns publish --subject 'Shutdown complete' --message '{\"hostname\": \"HOSTNAME_MACRO\", \"app\": \"mywebservice\"}'  --target-arn "${target_sns_topic}" --region "${aws.region_name},
-]
+```bash
+$ cat /opt/shutdown-scripts/notify-external.sh
+
+target_sns_topic="arn:aws:sns:$AWS_REGION:$AWS_ACCOUNT_ID:spinnaker-shutdowns-complete"
+aws sns publish --subject 'Shutdown complete' --message '{\"hostname\": \"$HOSTNAME\", \"app\": \"myapp\"}' --target-arn $target_sns_topic --region $AWS_REGION
 ```
 
 # Build
