@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/adobe/shredder.svg?branch=master)](https://travis-ci.org/adobe/shredder)
+
 # Shredder for EC2
 
 Shredder for EC2 is a Java daemon service that can perform graceful shutdowns for AWS EC2 instances in an Auto Scaling Group (ASG).
@@ -11,7 +13,7 @@ This tool is useful for services that are stateful - some data needs to be pushe
 You can either build the latest packages (see below) or you can use the published artifacts.
 For RedHat/Centos
 ```
-sudo yum install https://github.com/adobe/shredder/releases/download/2.0.1/aam-shredder-ec2-2.0.1-20190215154045.noarch.rpm
+sudo yum install https://github.com/adobe/shredder/releases/download/2.0.2/aam-shredder-ec2-2.0.2-20190215161148.noarch.rpm
 ```
 
 By default, whenever shredder receives a shutdown signal, it will run all the scripts from `/opt/shutdown-scripts` (in lexicographical order). In our case, each application RPM that requires a cleanup logic will automatically generate a shutdown script in this shutdown folder. For instance:
