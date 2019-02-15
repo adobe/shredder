@@ -63,7 +63,7 @@ ospackage {
 
     into "/usr/local/demdex/${project.name}/"
 
-    from("build/libs/${project.name}-${project.version}-all.jar") {
+    from("build/libs/${project.name}-all.jar") {
         user "ddxapp"
         permissionGroup "ddx"
         into "lib"
