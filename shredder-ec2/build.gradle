@@ -87,7 +87,7 @@ ospackage {
     link("/etc/init.d/${project.name}", "/usr/local/demdex/${project.name}/bin/ec2shredder")
     link("/etc/sysconfig/ec2shredder_wrapper.conf", "/usr/local/demdex/${project.name}/config/wrapper/ec2shredder_wrapper.conf")
     postInstall "install --mode=0755 --owner=ddxapp --group=ddx --directory /var/log/demdex/${project.name}"
-    postInstall "install --mode=0755 --owner=ddxapp --group=ddx --directory /var/run/demdex/${project.name}"
+    postInstall "install --mode=0755 --owner=ddxapp --group=ddx --directory /var/run/${project.name}"
 }
 
 buildRpm {
