@@ -23,4 +23,5 @@ dependencies {
 
     compile group: 'org.springframework', name: 'spring-context', version: '5.1.1.RELEASE'
     compile group: 'org.springframework', name: 'spring-beans', version: '5.1.1.RELEASE'
+    compile group: 'org.springframework.boot', name: 'spring-boot-autoconfigure', version: '2.1.8.RELEASE'
 }

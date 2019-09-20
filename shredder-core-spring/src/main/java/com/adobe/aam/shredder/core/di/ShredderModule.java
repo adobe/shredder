@@ -1,17 +1,18 @@
 /*
- * Copyright 2019 Adobe Systems Incorporated. All rights reserved.
- * This file is licensed to you under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy
- * of the License at http://www.apache.org/licenses/LICENSE-2.0
+ *  Copyright 2018 Adobe Systems Incorporated. All rights reserved.
+ *  This file is licensed to you under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License. You may obtain a copy
+ *  of the License at http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under
- * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
- * OF ANY KIND, either express or implied. See the License for the specific language
- * governing permissions and limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software distributed under
+ *  the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+ *  OF ANY KIND, either express or implied. See the License for the specific language
+ *  governing permissions and limitations under the License.
  */
 
 package com.adobe.aam.shredder.core.di;
 
+import com.adobe.aam.shredder.core.aws.ArnHelper;
 import com.adobe.aam.shredder.core.aws.TriggerHelper;
 import com.adobe.aam.shredder.core.aws.queue.AwsQueueCreator;
 import com.adobe.aam.shredder.core.aws.queue.NoopQueueCreator;
@@ -25,7 +26,6 @@ import com.adobe.aam.shredder.core.aws.sns.QueueSuscriber;
 import com.adobe.aam.shredder.core.aws.trigger.NoopTriggerWatcher;
 import com.adobe.aam.shredder.core.aws.trigger.SqsTriggerWatcher;
 import com.adobe.aam.shredder.core.aws.trigger.TriggerWatcher;
-import com.adobe.aam.shredder.core.aws.ArnHelper;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClientBuilder;
 import com.amazonaws.services.sns.AmazonSNS;
@@ -36,6 +36,7 @@ import com.amazonaws.util.EC2MetadataUtils;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
@@ -78,9 +79,9 @@ public class ShredderModule {
 
     @Bean
     public QueueCreator queueCreator(@Qualifier("awsEnabled") boolean awsEnabled,
-                                     @Qualifier("region") String region) {
+                                     AmazonSQS sqs) {
         if (awsEnabled) {
-            return new AwsQueueCreator(sqs(region));
+            return new AwsQueueCreator(sqs);
         }
 
         return new NoopQueueCreator();
@@ -88,9 +89,10 @@ public class ShredderModule {
 
     @Bean
     public QueueSuscriber snsSubcriber(@Qualifier("awsEnabled") boolean awsEnabled,
-                                       @Qualifier("region") String region) {
+                                       AmazonSQS sqs,
+                                       AmazonSNS sns) {
         if (awsEnabled) {
-            return new AwsQueueSuscriber(sqs(region), sns(region));
+            return new AwsQueueSuscriber(sqs, sns);
         }
 
         return new NoopQueueSuscriber();
@@ -116,9 +118,9 @@ public class ShredderModule {
 
     @Bean
     public AutoScaleGroupHelper autoScaleGroupHelper(@Qualifier("awsEnabled") boolean awsEnabled,
-                                                     @Qualifier("region") String region) {
+                                                     AmazonAutoScaling asg) {
         if (awsEnabled) {
-            return new AwsAutoScaleGroupHelper(asg(region));
+            return new AwsAutoScaleGroupHelper(asg);
         }
         return new NoopAutoScaleGroupHelper();
     }
@@ -141,15 +143,45 @@ public class ShredderModule {
         return objectMapper;
     }
 
-    private AmazonSNS sns(@Qualifier("region") String region) {
-        return AmazonSNSClientBuilder.standard().withRegion(region).build();
+    @Bean
+    @ConditionalOnProperty(
+            name = "aws.sns.self_managed",
+            havingValue="self_managed",
+            matchIfMissing = true)
+    public AmazonSNS sns(@Qualifier("awsEnabled") boolean awsEnabled,
+                         @Qualifier("region") String region) {
+        if (awsEnabled) {
+            return AmazonSNSClientBuilder.standard().withRegion(region).build();
+        }
+
+        return null;
     }
 
-    private AmazonSQS sqs(@Qualifier("region") String region) {
-        return AmazonSQSClientBuilder.standard().withRegion(region).build();
+    @Bean
+    @ConditionalOnProperty(
+            name = "aws.sqs.self_managed",
+            havingValue="self_managed",
+            matchIfMissing = true)
+    public AmazonSQS sqs(@Qualifier("awsEnabled") boolean awsEnabled,
+                         @Qualifier("region") String region) {
+        if (awsEnabled) {
+            return AmazonSQSClientBuilder.standard().withRegion(region).build();
+        }
+
+        return null;
     }
 
-    private AmazonAutoScaling asg(@Qualifier("region") String region) {
-        return AmazonAutoScalingClientBuilder.standard().withRegion(region).build();
+    @Bean
+    @ConditionalOnProperty(
+            name = "aws.asg.self_managed",
+            havingValue="self_managed",
+            matchIfMissing = true)
+    public AmazonAutoScaling asg(@Qualifier("awsEnabled") boolean awsEnabled,
+                                 @Qualifier("region") String region) {
+        if (awsEnabled) {
+            return AmazonAutoScalingClientBuilder.standard().withRegion(region).build();
+        }
+
+        return null;
     }
 }
