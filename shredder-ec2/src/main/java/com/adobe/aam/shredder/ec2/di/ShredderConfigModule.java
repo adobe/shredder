@@ -47,7 +47,10 @@ public class ShredderConfigModule extends AbstractModule {
         String startupScriptsPriority = config.hasPath("startup_scripts_priority")
                 ? config.getString("startup_scripts_priority")
                 : "";
-        return scriptRunnerFactory.create(startupScriptsPath, startupScriptsPriority);
+        Duration startupScriptsTimeout = config.hasPath("startup_scripts_timeout")
+                ? config.getDuration("startup_scripts_timeout")
+                : Duration.ofHours(1);
+        return scriptRunnerFactory.create(startupScriptsPath, startupScriptsPriority, startupScriptsTimeout.toMillis());
     }
 
     @Provides
@@ -60,7 +63,10 @@ public class ShredderConfigModule extends AbstractModule {
         String shutdownScriptsPriority = config.hasPath("shutdown_scripts_priority")
                 ? config.getString("shutdown_scripts_priority")
                 : "";
-        return scriptRunnerFactory.create(shutdownScriptsPath, shutdownScriptsPriority);
+        Duration shutdownScriptsTimeout = config.hasPath("shutdown_scripts_timeout")
+                ? config.getDuration("shutdown_scripts_timeout")
+                : Duration.ofHours(1);
+        return scriptRunnerFactory.create(shutdownScriptsPath, shutdownScriptsPriority, shutdownScriptsTimeout.toMillis());
     }
 
     @Provides
