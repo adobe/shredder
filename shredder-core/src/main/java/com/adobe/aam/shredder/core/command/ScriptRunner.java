@@ -31,22 +31,25 @@ import java.util.stream.Collectors;
 
 public class ScriptRunner {
     private static final Logger LOG = LoggerFactory.getLogger(ScriptRunner.class);
-    private static final long SCRIPT_TIMEOUT_MS = 60 * 60 * 1000;
+    private final long scriptTimeoout;
     private final String scriptsPriority;
     private final String scriptsPath;
     private final CommandRunner commandRunner;
 
     public interface ScriptRunnerFactory {
         ScriptRunner create(@Assisted("scriptsPath") String scriptsPath,
-                            @Assisted("scriptsPriority") String scriptsPriority);
+                            @Assisted("scriptsPriority") String scriptsPriority,
+                            @Assisted("scriptTimeout") long scriptTimeout);
     }
 
     @Inject
     public ScriptRunner(@Assisted("scriptsPath") String scriptsPath,
                         @Assisted("scriptsPriority") String scriptsPriority,
+                        @Assisted("scriptTimeout") long scriptTimeout,
                         CommandRunner commandRunner) {
         this.scriptsPath = scriptsPath;
         this.scriptsPriority = scriptsPriority;
+        this.scriptTimeoout = scriptTimeout;
         this.commandRunner = commandRunner;
     }
 
@@ -63,7 +66,7 @@ public class ScriptRunner {
     private boolean getRunScriptResult(String script, Runnable heartbeat) {
         try {
             LOG.info("Running script: {}", script);
-            int exitCode = commandRunner.execute(script, heartbeat, SCRIPT_TIMEOUT_MS);
+            int exitCode = commandRunner.execute(script, heartbeat, scriptTimeoout);
             LOG.info("Command finished with exit code {} - {}.", exitCode, exitCode == 0 ? "SUCCESS" : "ERROR");
             return exitCode == 0;
         } catch (Exception e) {
