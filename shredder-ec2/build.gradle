@@ -17,8 +17,8 @@ buildscript {
     }
   }
   dependencies {
-    classpath "com.netflix.nebula:gradle-ospackage-plugin:4.9.3"
-    classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+    classpath "com.netflix.nebula:gradle-ospackage-plugin:8.4.1"
+    classpath 'com.github.jengelman.gradle.plugins:shadow:6.0.0'
   }
 }
 
