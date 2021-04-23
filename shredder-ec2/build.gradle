@@ -57,7 +57,7 @@ ospackage {
     packageDescription "Adobe Audience Manager - ${project.name}"
 
     requires('java-service-wrapper')
-    requires('jdk')
+    requires('java-1.8.0-openjdk')
     preInstall file('pkg_scripts/preInstall.sh')
     postInstall file('pkg_scripts/postInstall.sh')
 
