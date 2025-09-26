@@ -15,7 +15,7 @@ apply plugin: 'application'
 mainClassName = 'com.adobe.aam.shredder.ec2.Main'
 
 dependencies {
-    compile group: 'com.github.davidmoten', name: 'rxjava2-aws', version: '0.1.14'
+    compile group: 'com.github.davidmoten', name: 'rxjava2-aws', version: '0.1.30'
     compile 'com.github.rholder:guava-retrying:2.0.0'
     compile 'com.google.inject.extensions:guice-assistedinject:4.0'
     compile group: 'commons-io', name: 'commons-io', version: '2.6'
