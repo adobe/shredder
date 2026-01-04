@@ -41,10 +41,10 @@ subprojects {
         compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
 
         compile "ch.qos.logback:logback-classic:1.2.3"
-        compile "com.amazonaws:aws-java-sdk-ec2:1.11.389"
-        compile "com.amazonaws:aws-java-sdk-sqs:1.11.389"
-        compile "com.amazonaws:aws-java-sdk-sns:1.11.389"
-        compile "com.amazonaws:aws-java-sdk-autoscaling:1.11.389"
+        compile "com.amazonaws:aws-java-sdk-ec2:1.12.797"
+        compile "com.amazonaws:aws-java-sdk-sqs:1.12.797"
+        compile "com.amazonaws:aws-java-sdk-sns:1.12.797"
+        compile "com.amazonaws:aws-java-sdk-autoscaling:1.12.797"
         compile "org.json:json:20171018"
 
         // spock & junit
