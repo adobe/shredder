@@ -30,7 +30,7 @@ mainClassName = 'com.adobe.aam.shredder.ec2.Main'
 
 dependencies {
     compile project(':shredder-core-guice')
-    compile group: 'com.amazonaws', name: 'aws-java-sdk-cloudwatch', version: '1.11.389'
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-cloudwatch', version: '1.12.797'
 }
 
 // Used by shadow jar
